@@ -6,11 +6,12 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from transformers import BertTokenizerFast
-from model import EncoderDecoderModel
-from transformers import BertTokenizer, BertModel, BertForMaskedLM, BertConfig, BertLMHeadModel
+from model import EncoderDecoderModel  # A local copy of the source code with our modifications
+from transformers import BertTokenizer, BertModel, BertForMaskedLM, BertConfig, BertLMHeadModel, PretrainedConfig
 
 
 def train_model(model):
+    # TODO
     model.train()
 
 
@@ -21,8 +22,9 @@ def eval_model(model):
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 
 # Encoder
+# We want to fine-tune (from_pretrained) because we want the BERT weights
 encoder_config = BertConfig(
-    _name_or_path="bert-base-uncased",  # Uncomment for pre-trained weights
+    _name_or_path="bert-base-uncased",
     architectures=["BertForMaskedLM"],
     attention_probs_dropout_prob=0.1,
     gradient_checkpointing=False,
@@ -42,11 +44,13 @@ encoder_config = BertConfig(
     type_vocab_size=2,
     use_cache=True,
     vocab_size=30522)
-encoder = BertModel(config=encoder_config)
+encoder = BertModel.from_pretrained(pretrained_model_name_or_path="bert-base-uncased", config=encoder_config)
 
 # Decoder
+# We want to train from scratch because we want to make the split of the representation (trick)
+# and the decoder will need to learn the trick
 decoder_config = BertConfig(
-    _name_or_path="bert-base-uncased",  # Uncomment for pre-trained weights
+    _name_or_path="bert-base-uncased",  # Uncomment for pre-trained weights TODO not working
     architectures=["BertForMaskedLM"],
     attention_probs_dropout_prob=0.1,
     gradient_checkpointing=False,
@@ -73,19 +77,21 @@ decoder = BertLMHeadModel(config=decoder_config)
 model = EncoderDecoderModel(encoder=encoder, decoder=decoder)
 
 """Verify we got a random weights compared to a pre-trained model"""
-# initialize Bert2Bert from pre-trained checkpoints
-# org_model = EncoderDecoderModel.from_encoder_decoder_pretrained('bert-base-uncased',
-#                                                                 'bert-base-uncased')
+# # initialize Bert2Bert from pre-trained checkpoints
+# org_model = EncoderDecoderModel.from_encoder_decoder_pretrained('bert-base-uncased', 'bert-base-uncased')
+#
+# # look at the parameters weights. `org_model` is the pretrained ones. compare to desired `model`.
 # encoder_params_my = list(model.encoder.parameters())
 # decoder_params_my = list(model.decoder.parameters())
 # encoder_params_org = list(org_model.encoder.parameters())
 # decoder_params_org = list(org_model.decoder.parameters())
 
+
 optimizer = optim.Adam(model.parameters())
 
 model.train()
 input_ids = torch.tensor(tokenizer.encode("Hello, my dog is cute", add_special_tokens=True)).unsqueeze(0)
-for i in range(100):
+for i in range(10):
     optimizer.zero_grad()
     outputs = model(input_ids=input_ids, decoder_input_ids=input_ids, labels=input_ids)
     loss, logits = outputs.loss, outputs.logits
