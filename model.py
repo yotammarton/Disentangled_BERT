@@ -157,6 +157,7 @@ class EncoderDecoderModel(PreTrainedModel):
             config: Optional[PretrainedConfig] = None,
             encoder: Optional[PreTrainedModel] = None,
             decoder: Optional[PreTrainedModel] = None,
+            split_embedding: Optional[bool] = None,
     ):
         assert config is not None or (
                 encoder is not None and decoder is not None
@@ -188,6 +189,13 @@ class EncoderDecoderModel(PreTrainedModel):
 
         # tie encoder, decoder weights if config set accordingly
         self.tie_weights()
+
+        # determines whether to split the learned encoder's embedding
+        # (True = do the disentangled trick)
+        if split_embedding is None:
+            self.split_embedding = False
+        else:
+            self.split_embedding = split_embedding  # TODO use this later in forward pass
 
     def tie_weights(self):
         # tie encoder & decoder if needed
