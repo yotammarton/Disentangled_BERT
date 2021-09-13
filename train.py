@@ -105,7 +105,7 @@ def run():
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 
     data = load_preprocess_glucose_dataset(batch_size=batch_size, tokenizer=tokenizer)
-    train_data, test_data = data['train'], data['test']
+    train_data, val_data, test_data = data['train'], data['val'], data['test']
 
     model = create_encoder_decoder_model(split_embedding=False)
     model.config.decoder_start_token_id = tokenizer.cls_token_id
@@ -116,23 +116,19 @@ def run():
     # noinspection PyTypeChecker
     training_args = Seq2SeqTrainingArguments(
         predict_with_generate=True,
-        evaluation_strategy="steps",
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
         # fp16=True, TODO CUDA Only
         output_dir="./",
-        max_steps=40,  # TODO
-        logging_steps=2,
-        save_steps=10,
-        eval_steps=4,
-        # logging_steps=1000,
-        # save_steps=500,
-        # eval_steps=7500,
-        # warmup_steps=2000,
-        # save_total_limit=3,
+        num_train_epochs=1,  # TODO just for checking everything works
+        # save_steps=10,  # TODO if we use save_strategy="steps"
+        evaluation_strategy="epoch",
+        logging_strategy="epoch",
+        save_strategy="epoch",
+        # warmup_steps=2000, # TODO linear increasing of the lr
     )
 
-    # TODO can be changed
+    # TODO metric can be changed
     #  good article: https://towardsdatascience.com/evaluating-text-output-in-nlp-bleu-at-your-own-risk-e8609665a213
     rouge = datasets.load_metric("rouge")
 
@@ -143,7 +139,7 @@ def run():
         args=training_args,
         compute_metrics=compute_metrics,
         train_dataset=train_data,
-        # eval_dataset=???, TODO choose some
+        eval_dataset=val_data
     )
 
     trainer.train()

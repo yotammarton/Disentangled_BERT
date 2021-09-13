@@ -23,33 +23,27 @@ def _process_data_to_model_inputs(batch, tokenizer):
 
 
 def load_preprocess_glucose_dataset(batch_size, tokenizer):
-    dataset = load_dataset("glucose")
-
-    train_data = dataset['train']
-    test_data = dataset['test']
+    train_data = load_dataset("glucose", script_version="0.0.0", split="train[5%:]")
+    val_data = load_dataset("glucose", script_version="0.0.0", split="train[:5%]")
+    test_data = load_dataset("glucose", script_version="0.0.0", split="test")
 
     process_data_to_model_inputs = partial(_process_data_to_model_inputs, tokenizer=tokenizer)
 
-    train_data = train_data.map(
-        process_data_to_model_inputs,
-        batched=True,
-        batch_size=batch_size,
-        remove_columns=[col for col in train_data.column_names if col != 'story']
-    )
+    def map_data(data):
+        data = data.map(process_data_to_model_inputs,
+                        batched=True,
+                        batch_size=batch_size,
+                        remove_columns=[col for col in data.column_names if col != 'story'])
 
-    train_data.set_format(
-        type="torch", columns=["input_ids", "attention_mask", "decoder_input_ids", "decoder_attention_mask", "labels"],
-    )
+        data.set_format(
+            type="torch",
+            columns=["input_ids", "attention_mask", "decoder_input_ids", "decoder_attention_mask", "labels"])
 
-    test_data = test_data.map(
-        process_data_to_model_inputs,
-        batched=True,
-        batch_size=batch_size,
-        remove_columns=[col for col in test_data.column_names if col != 'story']
-    )
+        return data
 
-    test_data.set_format(
-        type="torch", columns=["input_ids", "attention_mask", "decoder_input_ids", "decoder_attention_mask", "labels"],
-    )
+    return {'train': map_data(train_data), 'val': map_data(val_data), 'test': map_data(test_data)}
 
-    return {'train': train_data, 'test': test_data}
+
+if __name__ == "__main__":
+    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+    data = load_preprocess_glucose_dataset(batch_size=32, tokenizer=tokenizer)
