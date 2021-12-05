@@ -15,7 +15,6 @@ def _process_data_to_model_inputs(batch, tokenizer):
 
     batch["input_ids"] = tokenized.input_ids
     batch["attention_mask"] = tokenized.attention_mask
-    batch["decoder_input_ids"] = tokenized.input_ids.copy()
     batch["decoder_attention_mask"] = tokenized.attention_mask.copy()
     batch["labels"] = tokenized.input_ids.copy()
 
@@ -42,7 +41,7 @@ def load_preprocess_glucose_dataset(batch_size, tokenizer):
 
         data.set_format(
             type="torch",
-            columns=["input_ids", "attention_mask", "decoder_input_ids", "decoder_attention_mask", "labels"])
+            columns=["input_ids", "attention_mask", "decoder_attention_mask", "labels"])
 
         return data
 
@@ -65,7 +64,6 @@ def load_preprocess_cnn_dataset(batch_size):
 
         batch["input_ids"] = inputs.input_ids
         batch["attention_mask"] = inputs.attention_mask
-        batch["decoder_input_ids"] = outputs.input_ids
         batch["decoder_attention_mask"] = outputs.attention_mask
         batch["labels"] = outputs.input_ids.copy()
 
@@ -86,7 +84,7 @@ def load_preprocess_cnn_dataset(batch_size):
     )
 
     train_data.set_format(
-        type="torch", columns=["input_ids", "attention_mask", "decoder_input_ids", "decoder_attention_mask", "labels"],
+        type="torch", columns=["input_ids", "attention_mask", "decoder_attention_mask", "labels"],
     )
 
     val_data = datasets.load_dataset("cnn_dailymail", "3.0.0", split="validation[:10%]")
@@ -101,7 +99,7 @@ def load_preprocess_cnn_dataset(batch_size):
     )
 
     val_data.set_format(
-        type="torch", columns=["input_ids", "attention_mask", "decoder_input_ids", "decoder_attention_mask", "labels"],
+        type="torch", columns=["input_ids", "attention_mask", "decoder_attention_mask", "labels"],
     )
 
     return {'train': train_data, 'val': val_data}
