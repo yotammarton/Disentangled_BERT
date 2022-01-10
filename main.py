@@ -20,7 +20,7 @@ if __name__ == '__main__':
     """EncoderDecoderModel"""
     # https://huggingface.co/transformers/model_doc/encoderdecoder.html
     from transformers import BertTokenizer
-    from model import EncoderDecoderModel
+    from transformers.models.encoder_decoder import EncoderDecoderModel
     import torch
 
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')

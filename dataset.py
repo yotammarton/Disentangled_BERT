@@ -1,6 +1,6 @@
 from datasets import load_dataset
 from functools import partial
-from transformers import BertTokenizer
+from transformers import BertTokenizer, BertTokenizerFast
 
 
 def _process_data_to_model_inputs(batch, tokenizer):
@@ -49,9 +49,7 @@ def load_preprocess_glucose_dataset(batch_size, tokenizer):
 
 
 def load_preprocess_cnn_dataset(batch_size):
-    import datasets
-    train_data = datasets.load_dataset("cnn_dailymail", "3.0.0", split="train")
-    from transformers import BertTokenizerFast
+    train_data = load_dataset("cnn_dailymail", "3.0.0", split="train")
     tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased")
 
     encoder_max_length = 512
@@ -87,7 +85,7 @@ def load_preprocess_cnn_dataset(batch_size):
         type="torch", columns=["input_ids", "attention_mask", "decoder_attention_mask", "labels"],
     )
 
-    val_data = datasets.load_dataset("cnn_dailymail", "3.0.0", split="validation[:10%]")
+    val_data = load_dataset("cnn_dailymail", "3.0.0", split="validation[:10%]")
 
     val_data = val_data.select(range(32))
 
@@ -106,6 +104,7 @@ def load_preprocess_cnn_dataset(batch_size):
 
 
 if __name__ == "__main__":
+    """Check the function in this module"""
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-    # data = load_preprocess_glucose_dataset(batch_size=32, tokenizer=tokenizer) # TODO
-    cnn_data = load_preprocess_cnn_dataset(batch_size=8)  # TODO
+    glucose_data = load_preprocess_glucose_dataset(batch_size=32, tokenizer=tokenizer)
+    cnn_data = load_preprocess_cnn_dataset(batch_size=8)
