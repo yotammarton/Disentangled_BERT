@@ -51,7 +51,7 @@ if __name__ == '__main__':
     indices = np.random.choice(list(range(len(dataset))), size=n)
     sample = dataset.select(indices)
     # Load model
-    checkpoint = "checkpoint-15564"  # best checkpoint with split_embedding=True (disentangled trick)
+    checkpoint = "checkpoint-15568"  # best checkpoint with split_embedding=True (disentangled trick)
     model = EncoderDecoderModel.from_pretrained(checkpoint).to("cuda")
     # Put the model in eval mode
     model.is_training = False

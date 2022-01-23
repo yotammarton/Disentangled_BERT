@@ -187,6 +187,7 @@ class EncoderDecoderModel(PreTrainedModel):
             encoder: Optional[PreTrainedModel] = None,
             decoder: Optional[PreTrainedModel] = None,
             split_embedding: Optional[bool] = None,
+            bottleneck_layer_dim: Optional[int] = None
     ):
         assert config is not None or (
                 encoder is not None and decoder is not None
@@ -211,6 +212,10 @@ class EncoderDecoderModel(PreTrainedModel):
         self.encoder = encoder
         self.decoder = decoder
         self.is_training = True
+        self.bottleneck_layer_dim = bottleneck_layer_dim
+
+        if bottleneck_layer_dim is not None:
+            self.bottleneck_layer = torch.nn.Linear(encoder.config.hidden_size, bottleneck_layer_dim)
 
         if self.encoder.config.to_dict() != self.config.encoder.to_dict():
             logger.warning(
@@ -485,6 +490,9 @@ class EncoderDecoderModel(PreTrainedModel):
             decoder_input_ids = shift_tokens_right(
                 labels, self.config.pad_token_id, self.config.decoder_start_token_id
             )
+
+        if self.bottleneck_layer_dim is not None:
+            encoder_hidden_states = self.bottleneck_layer(encoder_hidden_states)
 
         # This is the Disentangled embeddings split trick
         # Training phase

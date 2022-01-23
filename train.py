@@ -15,9 +15,8 @@ from custom_modeling_encoder_decoder import EncoderDecoderModel
 os.environ["WANDB_DISABLED"] = "true"  # set wandb automatic setup to false
 
 
-def create_encoder_decoder_model(split_embedding=False):
+def create_encoder_decoder_model(split_embedding=False, bottleneck_layer_dim=None):
     # Encoder
-    # We want to fine-tune (from_pretrained) because we want the BERT weights
     encoder_config = BertConfig(
         _name_or_path="bert-base-uncased",
         architectures=["BertForMaskedLM"],
@@ -25,7 +24,7 @@ def create_encoder_decoder_model(split_embedding=False):
         gradient_checkpointing=False,
         hidden_act="gelu",
         hidden_dropout_prob=0.1,
-        hidden_size=768,
+        hidden_size=bottleneck_layer_dim if bottleneck_layer_dim is not None else 768,
         initializer_range=0.02,
         intermediate_size=3072,
         layer_norm_eps=1e-12,
@@ -39,7 +38,10 @@ def create_encoder_decoder_model(split_embedding=False):
         type_vocab_size=2,
         use_cache=True,
         vocab_size=30522)
-    encoder = BertModel.from_pretrained(pretrained_model_name_or_path="bert-base-uncased", config=encoder_config)
+    # Train encoder from scratch TODO choose
+    encoder = BertModel(config=encoder_config)
+    # We want to fine-tune (from_pretrained) because we want the BERT weights TODO choose
+    # encoder = BertModel.from_pretrained(pretrained_model_name_or_path="bert-base-uncased", config=encoder_config)
 
     # Decoder
     # We want to train from scratch because we want to make the split of the representation (trick)
@@ -51,7 +53,7 @@ def create_encoder_decoder_model(split_embedding=False):
         gradient_checkpointing=False,
         hidden_act="gelu",
         hidden_dropout_prob=0.1,
-        hidden_size=768,
+        hidden_size=bottleneck_layer_dim if bottleneck_layer_dim is not None else 768,
         initializer_range=0.02,
         intermediate_size=3072,
         layer_norm_eps=1e-12,
@@ -71,7 +73,8 @@ def create_encoder_decoder_model(split_embedding=False):
 
     model = EncoderDecoderModel(encoder=encoder,
                                 decoder=decoder,
-                                split_embedding=split_embedding)
+                                split_embedding=split_embedding,
+                                bottleneck_layer_dim=bottleneck_layer_dim)
 
     return model
 
@@ -93,14 +96,16 @@ def _compute_metrics(pred, rouge, tokenizer):
     }
 
 
-def train(split_embedding):
+def train(split_embedding, bottleneck_layer_dim):
     """
     Train a custom EncoderDecoderModel on glucose dataset
 
     @param split_embedding: True: make the disentangled embedding split,
                             False: keep the model as is without the embedding split
+    @param bottleneck_layer_dim: The out-dim of the bottleneck layer between the encoder and the decoder
     """
     print(f'[*] Training EncoderDecoderModel with split_embedding = {split_embedding}')
+    print(f'[*] Training EncoderDecoderModel with bottleneck_layer_dim = {bottleneck_layer_dim}')
     n_gpus = len(os.environ["CUDA_VISIBLE_DEVICES"].split(","))
     batch_size = 8
     print(f'[*] Using GPU(s): {os.environ["CUDA_VISIBLE_DEVICES"]} (n_gpus: {n_gpus}) and batch_size: {batch_size}')
@@ -109,7 +114,7 @@ def train(split_embedding):
     data = load_preprocess_glucose_dataset(batch_size=batch_size, tokenizer=tokenizer)
     train_data, val_data, test_data = data['train'], data['val'], data['test']
 
-    model = create_encoder_decoder_model(split_embedding=split_embedding)
+    model = create_encoder_decoder_model(split_embedding=split_embedding, bottleneck_layer_dim=bottleneck_layer_dim)
     model.config.decoder_start_token_id = tokenizer.cls_token_id
     model.config.eos_token_id = tokenizer.sep_token_id
     model.config.pad_token_id = tokenizer.pad_token_id
@@ -158,4 +163,6 @@ def train(split_embedding):
 if __name__ == "__main__":
     wandb.init(project="disentangled_bert", entity="yotammartin")
     split_embedding = True
-    train(split_embedding=split_embedding)  # True = split embedding, False = normal model
+    bottleneck_layer_dim = 300  # Must be a multiply of decode.num_hidden_layers or None (without the bottleneck layer)
+    train(split_embedding=split_embedding,  # True = split embedding, False = normal model
+          bottleneck_layer_dim=bottleneck_layer_dim)
